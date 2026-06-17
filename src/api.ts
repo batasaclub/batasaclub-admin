@@ -201,3 +201,21 @@ export interface TransactionsResponse {
   page: number;
   limit: number;
 }
+
+export interface InventoryRow {
+  hotel_id: string;
+  hotel_name: string;
+  city: string;
+  total_rooms: number;
+  purchased_batasa: number;
+  issued_batasa: number;
+  available_batasa: number;
+  minimum_batasa: number;
+  available_pct: number | null;
+  is_low: boolean;
+  is_zero: boolean;
+}
+
+export function getInventoryMonitoring() {
+  return request<InventoryRow[]>('/inventory/monitoring');
+}

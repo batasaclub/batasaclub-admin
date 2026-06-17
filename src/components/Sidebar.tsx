@@ -1,4 +1,4 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'reviews' | 'transactions';
+type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'reviews' | 'transactions' | 'inventory';
 
 interface SidebarProps {
   current: Page;
@@ -13,6 +13,7 @@ const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'settlement', label: 'Settlement', icon: '₹' },
   { id: 'reviews', label: 'Reviews', icon: '★' },
   { id: 'transactions', label: 'Transactions', icon: '⇄' },
+  { id: 'inventory', label: 'Inventory', icon: '◈' },
 ];
 
 export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {
@@ -22,7 +23,6 @@ export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {
         <div className="text-[#C79A3B] font-bold text-lg tracking-wide">Batasaclub</div>
         <div className="text-white/50 text-xs mt-0.5">Admin Console</div>
       </div>
-
       <nav className="flex-1 py-4 space-y-0.5 px-2">
         {nav.map((item) => {
           const active = current === item.id;
@@ -31,9 +31,7 @@ export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {
               key={item.id}
               onClick={() => onChange(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer ${
-                active
-                  ? 'bg-[#C79A3B]/20 text-[#C79A3B]'
-                  : 'text-white/70 hover:bg-white/5 hover:text-white'
+                active ? 'bg-[#C79A3B]/20 text-[#C79A3B]' : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
             >
               <span className="text-base w-5 text-center">{item.icon}</span>
@@ -42,12 +40,9 @@ export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {
           );
         })}
       </nav>
-
       <div className="px-4 py-4 border-t border-white/10">
-        <button
-          onClick={onLogout}
-          className="w-full text-sm text-white/50 hover:text-white/80 py-2 text-left transition-colors cursor-pointer"
-        >
+        <button onClick={onLogout}
+          className="w-full text-sm text-white/50 hover:text-white/80 py-2 text-left transition-colors cursor-pointer">
           ⊗ Sign out
         </button>
       </div>
