@@ -1,4 +1,4 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'reviews' | 'transactions' | 'inventory';
+type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'reviews' | 'transactions' | 'inventory' | 'adr_bands';
 
 interface SidebarProps {
   current: Page;
@@ -14,6 +14,7 @@ const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'reviews', label: 'Reviews', icon: '★' },
   { id: 'transactions', label: 'Transactions', icon: '⇄' },
   { id: 'inventory', label: 'Inventory', icon: '◈' },
+  { id: 'adr_bands', label: 'ADR Bands', icon: '◎' },
 ];
 
 export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {

@@ -219,3 +219,27 @@ export interface InventoryRow {
 export function getInventoryMonitoring() {
   return request<InventoryRow[]>('/inventory/monitoring');
 }
+
+export interface AdrBand {
+  id: string;
+  adr_min_rupees: number;
+  adr_max_rupees: number | null;
+  consumption_rate: string;
+  label: string;
+  is_active: boolean | null;
+  created_at: string;
+}
+
+export function getAdrBands() {
+  return request<{ bands: AdrBand[] }>('/admin/adr-bands');
+}
+
+export function updateAdrBand(
+  id: string,
+  data: { consumption_rate?: number; label?: string; is_active?: boolean },
+) {
+  return request<{ band: AdrBand }>(`/admin/adr-bands/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}

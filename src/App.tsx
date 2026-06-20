@@ -8,6 +8,7 @@ import Settlement from './pages/Settlement.tsx';
 import Reviews from './pages/Reviews.tsx';
 import Transactions from './pages/Transactions.tsx';
 import Inventory from './pages/Inventory.tsx';
+import AdrBands from './pages/AdrBands.tsx';
 
 function isAuthenticated() {
   return !!localStorage.getItem('admin_token');
@@ -21,6 +22,7 @@ const PAGE_TITLES: Record<Page, string> = {
   reviews: 'Reviews',
   transactions: 'Transactions',
   inventory: 'Inventory',
+  adr_bands: 'ADR Bands',
 };
 
 export default function App() {
@@ -45,6 +47,7 @@ export default function App() {
       case 'reviews': return <Reviews />;
       case 'transactions': return <Transactions />;
       case 'inventory': return <Inventory />;
+      case 'adr_bands': return <AdrBands />;
     }
   }
 
