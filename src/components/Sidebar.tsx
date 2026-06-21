@@ -1,4 +1,4 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'reviews' | 'transactions' | 'inventory' | 'adr_bands';
+type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands';
 
 interface SidebarProps {
   current: Page;
@@ -7,14 +7,15 @@ interface SidebarProps {
 }
 
 const nav: { id: Page; label: string; icon: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: '▦' },
-  { id: 'hotels', label: 'Hotels', icon: '⌂' },
-  { id: 'members', label: 'Members', icon: '◉' },
-  { id: 'settlement', label: 'Settlement', icon: '₹' },
-  { id: 'reviews', label: 'Reviews', icon: '★' },
-  { id: 'transactions', label: 'Transactions', icon: '⇄' },
-  { id: 'inventory', label: 'Inventory', icon: '◈' },
-  { id: 'adr_bands', label: 'ADR Bands', icon: '◎' },
+  { id: 'dashboard',   label: 'Dashboard',    icon: '▦' },
+  { id: 'hotels',      label: 'Hotels',        icon: '⌂' },
+  { id: 'members',     label: 'Members',       icon: '◉' },
+  { id: 'settlement',  label: 'Settlement',    icon: '₹' },
+  { id: 'reviews',     label: 'Reviews',       icon: '★' },
+  { id: 'transactions',label: 'Transactions',  icon: '⇄' },
+  { id: 'inventory',   label: 'Inventory',     icon: '◈' },
+  { id: 'rate_parity', label: 'Rate Parity',   icon: '⊞' },
+  { id: 'adr_bands',   label: 'ADR Bands',     icon: '◎' },
 ];
 
 export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {

@@ -1,9 +1,31 @@
 import { useEffect, useState } from 'react';
-import { getAdrBands, updateAdrBand, type AdrBand } from '../api.ts';
+import { getAdrBands, updateAdrBand, getNetworkConfig, updateNetworkConfig, type AdrBand, type NetworkConfig } from '../api.ts';
+
+const KNOWN_CONFIG: Record<string, { label: string; description: string; unit: string; defaultValue: string }> = {
+  corporate_contribution_paise: {
+    label: 'Corporate Contribution Rate',
+    description: 'Paise per Batasa contributed to reserve when corporate booking activates earn entries',
+    unit: 'paise/Batasa',
+    defaultValue: '50',
+  },
+  standard_contribution_paise: {
+    label: 'Standard Contribution Rate',
+    description: 'Paise per Batasa contributed to reserve when standard booking activates earn entries',
+    unit: 'paise/Batasa',
+    defaultValue: '33',
+  },
+};
 
 interface RowState {
   consumption_rate: string;
   label: string;
+  saving: boolean;
+  saved: boolean;
+  error: string;
+}
+
+interface ConfigRowState {
+  value: string;
   saving: boolean;
   saved: boolean;
   error: string;
@@ -19,22 +41,35 @@ export default function AdrBands() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rows, setRows] = useState<Record<string, RowState>>({});
+  const [configs, setConfigs] = useState<NetworkConfig[]>([]);
+  const [configRows, setConfigRows] = useState<Record<string, ConfigRowState>>({});
 
   useEffect(() => {
-    getAdrBands()
-      .then(({ bands: fetched }) => {
+    Promise.all([getAdrBands(), getNetworkConfig()])
+      .then(([{ bands: fetched }, { configs: fetchedConfigs }]) => {
         setBands(fetched);
         const init: Record<string, RowState> = {};
         fetched.forEach(b => {
-          init[b.id] = {
-            consumption_rate: String(b.consumption_rate),
-            label: b.label,
-            saving: false,
-            saved: false,
-            error: '',
-          };
+          init[b.id] = { consumption_rate: String(b.consumption_rate), label: b.label, saving: false, saved: false, error: '' };
         });
         setRows(init);
+
+        setConfigs(fetchedConfigs);
+        const configInit: Record<string, ConfigRowState> = {};
+        // seed with DB values; fill defaults for known keys not yet in DB
+        Object.keys(KNOWN_CONFIG).forEach(key => {
+          const existing = fetchedConfigs.find(c => c.key === key);
+          configInit[key] = {
+            value: existing?.value ?? KNOWN_CONFIG[key]!.defaultValue,
+            saving: false, saved: false, error: '',
+          };
+        });
+        fetchedConfigs.forEach(c => {
+          if (!configInit[c.key]) {
+            configInit[c.key] = { value: c.value, saving: false, saved: false, error: '' };
+          }
+        });
+        setConfigRows(configInit);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -89,6 +124,30 @@ export default function AdrBands() {
           saving: false,
           error: e instanceof Error ? e.message : 'Save failed',
         },
+      }));
+    }
+  }
+
+  async function saveConfig(key: string) {
+    const r = configRows[key];
+    if (!r) return;
+    const num = Number(r.value);
+    if (isNaN(num) || num <= 0) {
+      setConfigRows(prev => ({ ...prev, [key]: { ...prev[key]!, error: 'Must be a positive number' } }));
+      return;
+    }
+    setConfigRows(prev => ({ ...prev, [key]: { ...prev[key]!, saving: true, error: '' } }));
+    try {
+      const { config: updated } = await updateNetworkConfig(key, String(Math.round(num)));
+      setConfigs(prev => {
+        const exists = prev.find(c => c.key === key);
+        return exists ? prev.map(c => c.key === key ? updated : c) : [...prev, updated];
+      });
+      setConfigRows(prev => ({ ...prev, [key]: { value: updated.value, saving: false, saved: true, error: '' } }));
+    } catch (e) {
+      setConfigRows(prev => ({
+        ...prev,
+        [key]: { ...prev[key]!, saving: false, error: e instanceof Error ? e.message : 'Save failed' },
       }));
     }
   }
@@ -204,6 +263,90 @@ export default function AdrBands() {
         <p className="text-xs text-amber-800">
           <strong>Note:</strong> Changes apply to new bookings immediately. Existing hotels retain their current consumption rate until the ADR job runs at month-end.
         </p>
+      </div>
+
+      {/* Network Config */}
+      <div className="mt-10">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Network Config</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Global constants that control contribution rates and network-wide behaviour.
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-[#143D2D] px-5 py-3">
+            <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Contribution Rates</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                {['Config Key', 'Description', 'Value', 'Unit', 'Actions'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(KNOWN_CONFIG).map(([key, meta], i) => {
+                const r = configRows[key];
+                const dbValue = configs.find(c => c.key === key)?.value;
+                const dirty = r && r.value !== (dbValue ?? meta.defaultValue);
+                return (
+                  <tr key={key} className={`border-b border-gray-50 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700 whitespace-nowrap">{key}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-xs">
+                      <p className="font-medium text-gray-700 text-xs">{meta.label}</p>
+                      <p className="text-gray-400 text-xs mt-0.5">{meta.description}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={r?.value ?? meta.defaultValue}
+                        onChange={e => setConfigRows(prev => ({
+                          ...prev,
+                          [key]: { ...prev[key]!, value: e.target.value, saved: false, error: '' },
+                        }))}
+                        className="w-24 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:border-[#143D2D] focus:ring-1 focus:ring-[#143D2D]/20 tabular-nums"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{meta.unit}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 min-w-[120px]">
+                        {dirty && (
+                          <button
+                            onClick={() => saveConfig(key)}
+                            disabled={r?.saving}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#143D2D] text-white hover:bg-[#1e5540] disabled:opacity-60 transition-colors"
+                          >
+                            {r?.saving ? 'Saving…' : 'Save'}
+                          </button>
+                        )}
+                        {r?.saved && !dirty && (
+                          <span className="text-xs font-medium text-green-600">✓ Saved</span>
+                        )}
+                        {r?.error && (
+                          <span className="text-xs text-red-600">{r.error}</span>
+                        )}
+                        {!dirty && !r?.saved && !r?.error && dbValue == null && (
+                          <span className="text-xs text-gray-400">default</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+          <p className="text-xs text-blue-800">
+            <strong>Note:</strong> Contribution rate changes apply to activations from the next booking onwards.
+            Existing activated Batasa in the reserve are unaffected.
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import Settlement from './pages/Settlement.tsx';
 import Reviews from './pages/Reviews.tsx';
 import Transactions from './pages/Transactions.tsx';
 import Inventory from './pages/Inventory.tsx';
+import RateParity from './pages/RateParity.tsx';
 import AdrBands from './pages/AdrBands.tsx';
 
 function isAuthenticated() {
@@ -15,14 +16,15 @@ function isAuthenticated() {
 }
 
 const PAGE_TITLES: Record<Page, string> = {
-  dashboard: 'Dashboard',
-  hotels: 'Hotels',
-  members: 'Members',
-  settlement: 'Settlement',
-  reviews: 'Reviews',
+  dashboard:    'Dashboard',
+  hotels:       'Hotels',
+  members:      'Members',
+  settlement:   'Settlement',
+  reviews:      'Reviews',
   transactions: 'Transactions',
-  inventory: 'Inventory',
-  adr_bands: 'ADR Bands',
+  inventory:    'Inventory',
+  rate_parity:  'Rate Parity',
+  adr_bands:    'ADR Bands',
 };
 
 export default function App() {
@@ -40,14 +42,15 @@ export default function App() {
 
   function renderPage() {
     switch (page) {
-      case 'dashboard': return <Dashboard />;
-      case 'hotels': return <Hotels />;
-      case 'members': return <Members />;
-      case 'settlement': return <Settlement />;
-      case 'reviews': return <Reviews />;
+      case 'dashboard':    return <Dashboard />;
+      case 'hotels':       return <Hotels />;
+      case 'members':      return <Members />;
+      case 'settlement':   return <Settlement />;
+      case 'reviews':      return <Reviews />;
       case 'transactions': return <Transactions />;
-      case 'inventory': return <Inventory />;
-      case 'adr_bands': return <AdrBands />;
+      case 'inventory':    return <Inventory />;
+      case 'rate_parity':  return <RateParity />;
+      case 'adr_bands':    return <AdrBands />;
     }
   }
 

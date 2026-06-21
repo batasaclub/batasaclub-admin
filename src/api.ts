@@ -266,3 +266,52 @@ export interface BreakageSummary {
 export function getBreakage() {
   return request<{ rows: BreakageRow[]; summary: BreakageSummary }>('/admin/breakage');
 }
+
+export interface BatasaHealth {
+  locked: number;
+  active: number;
+  expired: number;
+  issued: number;
+  activation_rate_pct: number;
+}
+
+export function getBatasaHealth() {
+  return request<BatasaHealth>('/admin/batasa-health');
+}
+
+export interface RateParityLog {
+  id: string;
+  hotel_id: string;
+  hotel_name: string;
+  room_id: string;
+  room_name: string;
+  room_type: string | null;
+  ota_rate_paise: number;
+  previous_member_rate_paise: number | null;
+  new_member_rate_paise: number;
+  discount_pct_applied: number;
+  created_at: string;
+}
+
+export function getAdminRateParity() {
+  return request<{ logs: RateParityLog[] }>('/admin/rate-parity');
+}
+
+export interface NetworkConfig {
+  key: string;
+  value: string;
+  type: string;
+  description: string | null;
+  updated_at: string;
+}
+
+export function getNetworkConfig() {
+  return request<{ configs: NetworkConfig[] }>('/admin/network-config');
+}
+
+export function updateNetworkConfig(key: string, value: string) {
+  return request<{ config: NetworkConfig }>(`/admin/network-config/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ value }),
+  });
+}
