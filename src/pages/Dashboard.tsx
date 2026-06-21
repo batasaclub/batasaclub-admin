@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getStats, type StatsResponse } from '../api.ts';
+import { getStats, getBreakage, type StatsResponse, type BreakageSummary } from '../api.ts';
 
 function rupees(paise: number) {
   return '₹' + (paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -24,12 +24,13 @@ function StatCard({ label, value, sub, alert }: StatCardProps) {
 
 export default function Dashboard() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [breakage, setBreakage] = useState<BreakageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getStats()
-      .then(setStats)
+    Promise.all([getStats(), getBreakage()])
+      .then(([s, b]) => { setStats(s); setBreakage(b.summary); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -83,6 +84,30 @@ export default function Dashboard() {
           label="Outstanding Batasa"
           value={(stats.total_points_issued - stats.total_points_redeemed).toLocaleString()}
           sub="unredeemed liability"
+        />
+      </div>
+
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-8 mb-3">Breakage Observability</h2>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          label="Network Breakage Rate"
+          value={breakage != null ? `${breakage.network_breakage_rate_pct.toFixed(1)}%` : '—'}
+          sub="(expired + dormant) / issued"
+        />
+        <StatCard
+          label="Reserve Benefit"
+          value={breakage != null ? rupees(breakage.total_reserve_benefit_paise) : '—'}
+          sub="33% of breakage @ ₹1/pt"
+        />
+        <StatCard
+          label="Expired Batasa"
+          value={breakage != null ? Math.round(breakage.total_expired).toLocaleString() : '—'}
+          sub="pro-rata to issuing hotel"
+        />
+        <StatCard
+          label="Dormant Estimate"
+          value={breakage != null ? Math.round(breakage.total_dormant).toLocaleString() : '—'}
+          sub=">12 mo, never redeemed"
         />
       </div>
     </div>

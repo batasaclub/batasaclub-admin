@@ -243,3 +243,26 @@ export function updateAdrBand(
     body: JSON.stringify(data),
   });
 }
+
+export interface BreakageRow {
+  hotel_id: string;
+  hotel_name: string | null;
+  month: string;
+  batasa_issued: number;
+  batasa_expired: number;
+  batasa_dormant_estimate: number;
+  breakage_rate_pct: number;
+  reserve_benefit_paise: number;
+}
+
+export interface BreakageSummary {
+  total_issued: number;
+  total_expired: number;
+  total_dormant: number;
+  network_breakage_rate_pct: number;
+  total_reserve_benefit_paise: number;
+}
+
+export function getBreakage() {
+  return request<{ rows: BreakageRow[]; summary: BreakageSummary }>('/admin/breakage');
+}
