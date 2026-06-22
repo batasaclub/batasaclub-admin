@@ -11,6 +11,7 @@ import Inventory from './pages/Inventory.tsx';
 import RateParity from './pages/RateParity.tsx';
 import AdrBands from './pages/AdrBands.tsx';
 import SettlementJobLog from './pages/SettlementJobLog.tsx';
+import ChannelKeys from './pages/ChannelKeys.tsx';
 
 function isAuthenticated() {
   return !!localStorage.getItem('admin_token');
@@ -22,6 +23,7 @@ const PAGE_TITLES: Record<Page, string> = {
   members:             'Members',
   settlement:          'Settlement',
   settlement_job_log:  'Job Monitor',
+  channel_keys:        'Channel Keys',
   reviews:             'Reviews',
   transactions:        'Transactions',
   inventory:           'Inventory',
@@ -54,6 +56,7 @@ export default function App() {
       case 'rate_parity':  return <RateParity />;
       case 'adr_bands':           return <AdrBands />;
       case 'settlement_job_log':  return <SettlementJobLog />;
+      case 'channel_keys':        return <ChannelKeys />;
     }
   }
 

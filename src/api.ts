@@ -337,3 +337,36 @@ export interface SettlementJobRun {
 export function getSettlementJobLog() {
   return request<{ runs: SettlementJobRun[] }>('/admin/settlement-job-log');
 }
+
+export interface ChannelKey {
+  id: string;
+  hotel_id: string;
+  api_key: string;
+  label: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ChannelKeyHotel {
+  hotel_id: string;
+  hotel_name: string;
+  city: string;
+  keys: ChannelKey[];
+}
+
+export function getChannelKeys() {
+  return request<{ hotels: ChannelKeyHotel[] }>('/admin/channel-keys');
+}
+
+export function createChannelKey(hotelId: string, label: string) {
+  return request<{ key: ChannelKey }>(`/admin/channel-keys/${hotelId}`, {
+    method: 'POST',
+    body: JSON.stringify({ label }),
+  });
+}
+
+export function revokeChannelKey(id: string) {
+  return request<{ key: ChannelKey }>(`/admin/channel-keys/${id}/revoke`, {
+    method: 'PATCH',
+  });
+}
