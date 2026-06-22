@@ -90,55 +90,67 @@ export default function Dashboard() {
       </div>
 
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-8 mb-3">Locked vs Active Batasa</h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Locked Batasa"
-          value={health ? health.locked.toLocaleString() : '—'}
-          sub="earned, pending activation"
-        />
-        <StatCard
-          label="Active Batasa"
-          value={health ? health.active.toLocaleString() : '—'}
-          sub="activated, redeemable"
-          gold
-        />
-        <StatCard
-          label="Activation Rate"
-          value={health ? `${health.activation_rate_pct.toFixed(1)}%` : '—'}
-          sub="active / total issued"
-          gold={health ? health.activation_rate_pct >= 50 : false}
-          alert={health ? health.activation_rate_pct < 20 : false}
-        />
-        <StatCard
-          label="Expired Batasa"
-          value={health ? health.expired.toLocaleString() : '—'}
-          sub="locked entries expired"
-        />
-      </div>
+      {health && health.issued === 0 ? (
+        <div className="rounded-xl border border-gray-100 bg-white p-5 text-sm text-gray-400">
+          No Batasa issued yet — this section populates after the first hotel enrollment.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Locked Batasa"
+            value={health ? health.locked.toLocaleString() : '—'}
+            sub="earned, pending activation"
+          />
+          <StatCard
+            label="Active Batasa"
+            value={health ? health.active.toLocaleString() : '—'}
+            sub="activated, redeemable"
+            gold
+          />
+          <StatCard
+            label="Activation Rate"
+            value={health ? `${health.activation_rate_pct.toFixed(1)}%` : '—'}
+            sub="active / total issued"
+            gold={health ? health.activation_rate_pct >= 50 : false}
+            alert={health ? health.activation_rate_pct < 20 : false}
+          />
+          <StatCard
+            label="Expired Batasa"
+            value={health ? health.expired.toLocaleString() : '—'}
+            sub="locked entries expired"
+          />
+        </div>
+      )}
 
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-8 mb-3">Breakage Observability</h2>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Network Breakage Rate"
-          value={breakage != null ? `${breakage.network_breakage_rate_pct.toFixed(1)}%` : '—'}
-          sub="(expired + dormant) / issued"
-        />
-        <StatCard
-          label="Reserve Benefit"
-          value={breakage != null ? rupees(breakage.total_reserve_benefit_paise) : '—'}
-          sub="33% of breakage @ ₹1/pt"
-        />
-        <StatCard
-          label="Expired Batasa"
-          value={breakage != null ? Math.round(breakage.total_expired).toLocaleString() : '—'}
-          sub="pro-rata to issuing hotel"
-        />
-        <StatCard
-          label="Dormant Estimate"
-          value={breakage != null ? Math.round(breakage.total_dormant).toLocaleString() : '—'}
-          sub=">12 mo, never redeemed"
-        />
-      </div>
+      {breakage && breakage.total_issued === 0 ? (
+        <div className="rounded-xl border border-gray-100 bg-white p-5 text-sm text-gray-400">
+          No breakage data yet — populates as Batasa cohorts mature past 12 months with unredeemd points.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Network Breakage Rate"
+            value={breakage != null ? `${breakage.network_breakage_rate_pct.toFixed(1)}%` : '—'}
+            sub="(expired + dormant) / issued"
+          />
+          <StatCard
+            label="Reserve Benefit"
+            value={breakage != null ? rupees(breakage.total_reserve_benefit_paise) : '—'}
+            sub="33% of breakage @ ₹1/pt"
+          />
+          <StatCard
+            label="Expired Batasa"
+            value={breakage != null ? Math.round(breakage.total_expired).toLocaleString() : '—'}
+            sub="pro-rata to issuing hotel"
+          />
+          <StatCard
+            label="Dormant Estimate"
+            value={breakage != null ? Math.round(breakage.total_dormant).toLocaleString() : '—'}
+            sub=">12 mo, never redeemed"
+          />
+        </div>
+      )}
     </div>
   );
 }
