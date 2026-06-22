@@ -315,3 +315,25 @@ export function updateNetworkConfig(key: string, value: string) {
     body: JSON.stringify({ value }),
   });
 }
+
+export interface SettlementJobEntry {
+  id: string;
+  hotel_id: string;
+  hotel_name: string;
+  run_date: string;
+  status: 'success' | 'failed';
+  error_message: string | null;
+  processed_at: string;
+}
+
+export interface SettlementJobRun {
+  run_date: string;
+  total: number;
+  succeeded: number;
+  failed: number;
+  entries: SettlementJobEntry[];
+}
+
+export function getSettlementJobLog() {
+  return request<{ runs: SettlementJobRun[] }>('/admin/settlement-job-log');
+}

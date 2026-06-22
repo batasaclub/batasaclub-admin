@@ -10,21 +10,23 @@ import Transactions from './pages/Transactions.tsx';
 import Inventory from './pages/Inventory.tsx';
 import RateParity from './pages/RateParity.tsx';
 import AdrBands from './pages/AdrBands.tsx';
+import SettlementJobLog from './pages/SettlementJobLog.tsx';
 
 function isAuthenticated() {
   return !!localStorage.getItem('admin_token');
 }
 
 const PAGE_TITLES: Record<Page, string> = {
-  dashboard:    'Dashboard',
-  hotels:       'Hotels',
-  members:      'Members',
-  settlement:   'Settlement',
-  reviews:      'Reviews',
-  transactions: 'Transactions',
-  inventory:    'Inventory',
-  rate_parity:  'Rate Parity',
-  adr_bands:    'ADR Bands',
+  dashboard:           'Dashboard',
+  hotels:              'Hotels',
+  members:             'Members',
+  settlement:          'Settlement',
+  settlement_job_log:  'Job Monitor',
+  reviews:             'Reviews',
+  transactions:        'Transactions',
+  inventory:           'Inventory',
+  rate_parity:         'Rate Parity',
+  adr_bands:           'ADR Bands',
 };
 
 export default function App() {
@@ -50,7 +52,8 @@ export default function App() {
       case 'transactions': return <Transactions />;
       case 'inventory':    return <Inventory />;
       case 'rate_parity':  return <RateParity />;
-      case 'adr_bands':    return <AdrBands />;
+      case 'adr_bands':           return <AdrBands />;
+      case 'settlement_job_log':  return <SettlementJobLog />;
     }
   }
 
