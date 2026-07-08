@@ -56,6 +56,13 @@ export function freezeHotel(id: string, freeze: boolean) {
   });
 }
 
+export function updateHotelWhatsapp(id: string, whatsapp_number: string) {
+  return request<{ hotel: Hotel }>(`/admin/hotels/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ whatsapp_number }),
+  });
+}
+
 export function uploadHotelPhoto(id: string, file: File) {
   return uploadRequest<{ photo_url: string }>(`/admin/hotels/${id}/photo`, file, 'photo');
 }
@@ -130,6 +137,7 @@ export interface Hotel {
   hotel_security_float: SecurityFloat | null;
   issuance_frozen: boolean;
   photo_url: string | null;
+  whatsapp_number: string | null;
 }
 
 export interface MembersResponse {

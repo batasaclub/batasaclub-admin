@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { getHotels, freezeHotel, uploadHotelPhoto, type Hotel } from '../api.ts';
+import { getHotels, freezeHotel, uploadHotelPhoto, updateHotelWhatsapp, type Hotel } from '../api.ts';
 
 const SLAB_COLORS: Record<string, string> = {
   red: 'bg-red-100 text-red-700',
@@ -30,6 +30,9 @@ export default function Hotels() {
   const [uploadError, setUploadError] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeHotelId = useRef<string | null>(null);
+  const [whatsappDraft, setWhatsappDraft] = useState<Record<string, string>>({});
+  const [savingWhatsapp, setSavingWhatsapp] = useState<Record<string, boolean>>({});
+  const [whatsappError, setWhatsappError] = useState<Record<string, string>>({});
 
   function load() {
     setLoading(true);
@@ -77,6 +80,24 @@ export default function Hotels() {
     }
   }
 
+  function handleWhatsappChange(hotelId: string, value: string) {
+    setWhatsappDraft((prev) => ({ ...prev, [hotelId]: value }));
+  }
+
+  async function handleWhatsappSave(hotel: Hotel) {
+    const value = whatsappDraft[hotel.id] ?? hotel.whatsapp_number ?? '';
+    setWhatsappError((prev) => ({ ...prev, [hotel.id]: '' }));
+    setSavingWhatsapp((prev) => ({ ...prev, [hotel.id]: true }));
+    try {
+      const { hotel: updated } = await updateHotelWhatsapp(hotel.id, value);
+      setHotels((prev) => prev.map((h) => (h.id === hotel.id ? { ...h, whatsapp_number: updated.whatsapp_number } : h)));
+    } catch (err) {
+      setWhatsappError((prev) => ({ ...prev, [hotel.id]: (err as Error).message }));
+    } finally {
+      setSavingWhatsapp((prev) => ({ ...prev, [hotel.id]: false }));
+    }
+  }
+
   if (loading) return <div className="p-8 text-gray-500">Loading…</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
@@ -98,6 +119,7 @@ export default function Hotels() {
             <tr className="border-b border-gray-100 bg-gray-50">
               <th className="text-left px-4 py-3 font-medium text-gray-600">Photo</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Hotel</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">WhatsApp</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">City</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">Slab</th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Enrol Rate</th>
@@ -135,6 +157,27 @@ export default function Hotels() {
                     )}
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-900">{h.name}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="e.g. 919876543210"
+                        value={whatsappDraft[h.id] ?? h.whatsapp_number ?? ''}
+                        onChange={(e) => handleWhatsappChange(h.id, e.target.value)}
+                        className="w-32 text-xs px-2 py-1 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-green-400"
+                      />
+                      <button
+                        onClick={() => handleWhatsappSave(h)}
+                        disabled={savingWhatsapp[h.id]}
+                        className="text-xs px-2 py-1 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50 cursor-pointer"
+                      >
+                        {savingWhatsapp[h.id] ? '…' : 'Save'}
+                      </button>
+                    </div>
+                    {whatsappError[h.id] && (
+                      <p className="text-xs text-red-600 mt-1">{whatsappError[h.id]}</p>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{h.city}</td>
                   <td className="px-4 py-3 text-center">
                     <SlabBadge slab={h.slab} />
