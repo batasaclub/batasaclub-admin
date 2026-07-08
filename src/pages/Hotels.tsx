@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getHotels, freezeHotel, type Hotel } from '../api.ts';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { getHotels, freezeHotel, uploadHotelPhoto, type Hotel } from '../api.ts';
 
 const SLAB_COLORS: Record<string, string> = {
   red: 'bg-red-100 text-red-700',
@@ -26,6 +26,10 @@ export default function Hotels() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toggling, setToggling] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [uploadError, setUploadError] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeHotelId = useRef<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -50,6 +54,29 @@ export default function Hotels() {
     }
   }
 
+  function handlePhotoClick(hotelId: string) {
+    activeHotelId.current = hotelId;
+    fileInputRef.current?.click();
+  }
+
+  async function handlePhotoSelected(e: ChangeEvent<HTMLInputElement>) {
+    const hotelId = activeHotelId.current;
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!hotelId || !file) return;
+
+    setUploadError((prev) => ({ ...prev, [hotelId]: '' }));
+    setUploading((prev) => ({ ...prev, [hotelId]: true }));
+    try {
+      const { photo_url } = await uploadHotelPhoto(hotelId, file);
+      setHotels((prev) => prev.map((h) => (h.id === hotelId ? { ...h, photo_url } : h)));
+    } catch (err) {
+      setUploadError((prev) => ({ ...prev, [hotelId]: (err as Error).message }));
+    } finally {
+      setUploading((prev) => ({ ...prev, [hotelId]: false }));
+    }
+  }
+
   if (loading) return <div className="p-8 text-gray-500">Loading…</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
@@ -57,10 +84,19 @@ export default function Hotels() {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Hotels ({hotels.length})</h1>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handlePhotoSelected}
+      />
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Photo</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Hotel</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">City</th>
               <th className="text-center px-4 py-3 font-medium text-gray-600">Slab</th>
@@ -77,6 +113,27 @@ export default function Hotels() {
               const suspended = h.hotel_security_float?.status === 'suspended';
               return (
                 <tr key={h.id} className={`border-b border-gray-50 ${i % 2 === 0 ? '' : 'bg-gray-50/50'}`}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {h.photo_url ? (
+                        <img src={h.photo_url} alt={h.name} className="w-12 h-12 rounded-lg object-cover border border-gray-200" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-300 text-xs">
+                          No photo
+                        </div>
+                      )}
+                      <button
+                        onClick={() => handlePhotoClick(h.id)}
+                        disabled={uploading[h.id]}
+                        className="text-xs px-2 py-1 rounded-lg font-medium bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-50 cursor-pointer"
+                      >
+                        {uploading[h.id] ? 'Uploading…' : h.photo_url ? 'Replace' : 'Upload'}
+                      </button>
+                    </div>
+                    {uploadError[h.id] && (
+                      <p className="text-xs text-red-600 mt-1">{uploadError[h.id]}</p>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-medium text-gray-900">{h.name}</td>
                   <td className="px-4 py-3 text-gray-600">{h.city}</td>
                   <td className="px-4 py-3 text-center">

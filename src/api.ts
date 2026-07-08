@@ -17,6 +17,22 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function uploadRequest<T>(path: string, file: File, fieldName: string): Promise<T> {
+  const token = localStorage.getItem('admin_token') ?? '';
+  const form = new FormData();
+  form.append(fieldName, file);
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: 'Upload failed' })) as { error?: string };
+    throw new Error(body.error ?? 'Upload failed');
+  }
+  return res.json() as Promise<T>;
+}
+
 export function adminLogin(email: string, password: string) {
   return request<{ token: string }>('/auth/admin/login', {
     method: 'POST',
@@ -38,6 +54,10 @@ export function freezeHotel(id: string, freeze: boolean) {
     method: 'PATCH',
     body: JSON.stringify({ freeze }),
   });
+}
+
+export function uploadHotelPhoto(id: string, file: File) {
+  return uploadRequest<{ photo_url: string }>(`/admin/hotels/${id}/photo`, file, 'photo');
 }
 
 export function getMembers(search?: string, page = 1) {
@@ -109,6 +129,7 @@ export interface Hotel {
   is_active: boolean;
   hotel_security_float: SecurityFloat | null;
   issuance_frozen: boolean;
+  photo_url: string | null;
 }
 
 export interface MembersResponse {
