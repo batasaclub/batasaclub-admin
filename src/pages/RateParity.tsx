@@ -46,7 +46,7 @@ export default function RateParity() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Hotel', 'Room', 'OTA Rate', 'Prev Member Rate', 'New Member Rate', 'Discount', 'Date'].map(h => (
+                  {['Hotel', 'Room', 'OTA Rate', 'Prev Member Rate · historical (stored)', 'New Member Rate · historical (stored)', 'Discount', 'Date'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
