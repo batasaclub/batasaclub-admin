@@ -111,6 +111,40 @@ export function deactivateAdmin(id: string) {
   return request<{ ok: true }>(`/admin/admins/${encodeURIComponent(id)}/deactivate`, { method: 'POST' });
 }
 
+// ── Admin audit log (read-only) ───────────────────────────────────────────────
+
+export type AuditJson = Record<string, unknown> | unknown[] | string | number | boolean | null;
+
+export interface AuditLogEntry {
+  id: string;
+  actor_id: string;                 // admin_users.id, or "system:<job>"
+  actor: { id: string; name: string; email: string } | null; // null for a system actor
+  action: string;                   // e.g. hotel.freeze
+  entity_type: string;
+  entity_id: string;
+  before: AuditJson;
+  after: AuditJson;
+  request_id: string | null;
+  at: string;
+}
+
+export interface AuditLogFilters {
+  actor_id?: string;
+  entity_type?: string;
+  entity_id?: string;
+  from?: string; // YYYY-MM-DD
+  to?: string;   // YYYY-MM-DD, whole day included
+  page?: number;
+  limit?: number;
+}
+
+// GET /admin/audit-log — newest first. There is no write endpoint: the log is append-only.
+export function getAuditLog(f: AuditLogFilters) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== '') q.set(k, String(v));
+  return request<{ entries: AuditLogEntry[]; total: number; page: number; limit: number }>(`/admin/audit-log?${q}`);
+}
+
 export function getStats() {
   return request<StatsResponse>('/admin/stats');
 }

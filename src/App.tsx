@@ -13,6 +13,7 @@ import AdrBands from './pages/AdrBands.tsx';
 import SettlementJobLog from './pages/SettlementJobLog.tsx';
 import ChannelKeys from './pages/ChannelKeys.tsx';
 import Admins from './pages/Admins.tsx';
+import AuditLog from './pages/AuditLog.tsx';
 import SetPassword, { INVITE_ACCEPTED_NOTICE } from './pages/SetPassword.tsx';
 import { clearSession, getAdminProfile } from './api.ts';
 
@@ -32,6 +33,7 @@ const PAGE_TITLES: Record<Page, string> = {
   settlement_job_log:  'Job Monitor',
   channel_keys:        'Channel Keys',
   admins:              'Admins',
+  audit_log:           'Audit Log',
   reviews:             'Reviews',
   transactions:        'Transactions',
   inventory:           'Inventory',
@@ -80,6 +82,7 @@ export default function App() {
       case 'settlement_job_log':  return <SettlementJobLog />;
       case 'channel_keys':        return <ChannelKeys />;
       case 'admins':              return <Admins />;
+      case 'audit_log':           return <AuditLog />;
     }
   }
 
