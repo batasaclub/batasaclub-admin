@@ -503,3 +503,79 @@ export function revokeChannelKey(id: string) {
     method: 'PATCH',
   });
 }
+
+// ── Earn approval queue (ARTHA_ADMIN) ──────────────────────────────────────
+// Earn is never auto-credited: every earn is a pending request until an admin approves it here.
+// No bulk approve exists in the API; each approval is one request.
+
+export type EarnRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type EarnRequestSource = 'checkout' | 'walk_in' | 'batasa_channel' | 'channel_api' | 'ancillary' | 'tier_job';
+
+export interface EarnRequest {
+  id: string;
+  member_id: string;
+  hotel_id: string;
+  booking_id: string | null;
+  source: EarnRequestSource;
+  base_amount_paise: string; // bigint, serialised as a string
+  tier_at_request: string;
+  earn_rate_at_request: number;
+  batasa_requested: number;
+  category: string | null;
+  status: EarnRequestStatus;
+  requested_by: string;
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  points_ledger_id: string | null;
+  member: { id: string; name: string | null; mobile: string | null; email: string | null; tier: string } | null;
+  hotel: { id: string; name: string; city: string } | null;
+  decided_by_admin: { id: string; name: string; email: string } | null;
+  booking: {
+    id: string;
+    booking_ref: string;
+    check_in: string;
+    check_out: string;
+    nights: number;
+    status: string | null;
+    booking_channel: string | null;
+    booking_source: string | null;
+    amount_charged_paise: string;
+    cash_paid_paise: string;
+    points_used: number | null;
+    points_value_paise: string | null;
+    is_corporate: boolean;
+    rate_type: string;
+    payment_method: 'cash' | 'cash_and_batasa' | 'batasa';
+  } | null;
+}
+
+export interface EarnRequestFilters {
+  status: EarnRequestStatus;
+  hotel_id?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function getEarnRequests(f: EarnRequestFilters) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(f)) if (v !== undefined && v !== '') q.set(k, String(v));
+  return request<{ requests: EarnRequest[]; total: number; page: number; limit: number }>(`/admin/earn-requests?${q}`);
+}
+
+export function approveEarnRequest(id: string, note?: string) {
+  return request<{
+    request: { id: string; status: EarnRequestStatus; batasa_requested: number; points_ledger_id: string };
+    member: { id: string; total_points: number; tier: string };
+    tier_change: { from: string; to: string } | null;
+  }>(`/admin/earn-requests/${id}/approve`, { method: 'POST', body: JSON.stringify(note ? { note } : {}) });
+}
+
+export function rejectEarnRequest(id: string, reason: string) {
+  return request<{ request: { id: string; status: EarnRequestStatus; batasa_requested: number; decision_note: string } }>(
+    `/admin/earn-requests/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) },
+  );
+}

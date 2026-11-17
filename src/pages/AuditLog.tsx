@@ -12,13 +12,16 @@ const PAGE_SIZE = 50;
 // Mirrors AdminEntityType in batasaclub-api src/lib/adminAudit.ts.
 const ENTITY_TYPES = [
   'hotel', 'room', 'channel_key', 'adr_band', 'network_config', 'batasa_inventory', 'funding_invoice',
-  'settlement', 'redemption', 'booking', 'complaint', 'hotel_user', 'admin_user',
+  'settlement', 'redemption', 'booking', 'complaint', 'hotel_user', 'admin_user', 'earn_request',
 ] as const;
 
 // Known system actors (cron jobs / scripts). A person is filtered by their admin_users.id.
 const SYSTEM_ACTORS = [
   { id: 'system:settlementJob', label: 'System — settlement job' },
   { id: 'system:create-admin', label: 'System — create-admin script' },
+  { id: 'system:booking_cancel', label: 'System — booking cancelled' },
+  { id: 'system:channel_cancel', label: 'System — channel booking cancelled' },
+  { id: 'system:expiryJob', label: 'System — expiry job' },
 ];
 
 const fmtDate = (iso: string) =>

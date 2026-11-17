@@ -1,4 +1,4 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log';
+type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue';
 
 interface SidebarProps {
   current: Page;
@@ -8,6 +8,7 @@ interface SidebarProps {
 
 const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'dashboard',   label: 'Dashboard',    icon: '▦' },
+  { id: 'earn_queue',  label: 'Earn Queue',    icon: '✓' },
   { id: 'hotels',      label: 'Hotels',        icon: '⌂' },
   { id: 'members',     label: 'Members',       icon: '◉' },
   { id: 'settlement',        label: 'Settlement',     icon: '₹' },
