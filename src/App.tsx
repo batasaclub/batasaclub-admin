@@ -15,6 +15,7 @@ import ChannelKeys from './pages/ChannelKeys.tsx';
 import Admins from './pages/Admins.tsx';
 import AuditLog from './pages/AuditLog.tsx';
 import EarnQueue from './pages/EarnQueue.tsx';
+import TopupRates from './pages/TopupRates.tsx';
 import SetPassword, { INVITE_ACCEPTED_NOTICE } from './pages/SetPassword.tsx';
 import { clearSession, getAdminProfile } from './api.ts';
 
@@ -36,6 +37,7 @@ const PAGE_TITLES: Record<Page, string> = {
   admins:              'Admins',
   audit_log:           'Audit Log',
   earn_queue:          'Earn Queue',
+  topup_rates:         'Top-up Rates',
   reviews:             'Reviews',
   transactions:        'Transactions',
   inventory:           'Inventory',
@@ -86,6 +88,7 @@ export default function App() {
       case 'admins':              return <Admins />;
       case 'audit_log':           return <AuditLog />;
       case 'earn_queue':          return <EarnQueue />;
+      case 'topup_rates':         return <TopupRates />;
     }
   }
 

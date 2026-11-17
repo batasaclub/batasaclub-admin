@@ -1,4 +1,4 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue';
+type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue' | 'topup_rates';
 
 interface SidebarProps {
   current: Page;
@@ -10,6 +10,7 @@ const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'dashboard',   label: 'Dashboard',    icon: '▦' },
   { id: 'earn_queue',  label: 'Earn Queue',    icon: '✓' },
   { id: 'hotels',      label: 'Hotels',        icon: '⌂' },
+  { id: 'topup_rates', label: 'Top-up Rates',  icon: '₿' },
   { id: 'members',     label: 'Members',       icon: '◉' },
   { id: 'settlement',        label: 'Settlement',     icon: '₹' },
   { id: 'settlement_job_log', label: 'Job Monitor',   icon: '⚙' },

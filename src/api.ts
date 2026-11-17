@@ -579,3 +579,98 @@ export function rejectEarnRequest(id: string, reason: string) {
     `/admin/earn-requests/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) },
   );
 }
+
+// ---------- Hotel Batasa ledger (Oct 2026 model, 1 Batasa = ₹1) ----------
+// Two balances per hotel, never mixed: general (founding grant, top-ups, adjustments) and
+// promotion_only (from guest redemptions; only funds the hotel's own promotions).
+export type LedgerBucket = 'general' | 'promotion_only';
+
+export interface HotelBalances {
+  general: number;
+  promotion_only: number;
+  total: number;
+  explanation: Record<LedgerBucket, string>;
+}
+
+export interface HotelLedgerEntry {
+  id: string;
+  hotel_id: string;
+  txn_type: string;
+  bucket: LedgerBucket;
+  batasa: number;
+  balance_after: number;
+  reference_type: string | null;
+  reference_id: string | null;
+  member_id: string | null;
+  payment_reference: string | null;
+  price_paise_per_batasa: number | null;
+  topup_rate_id: string | null;
+  actor_id: string;
+  created_at: string;
+}
+
+export interface TopupRate {
+  id: string;
+  hotel_id: string | null;
+  hotel_name?: string | null;
+  scope: 'hotel' | 'network';
+  price_paise_per_batasa: number;
+  effective_from: string;
+  created_by: string;
+  created_at: string;
+  in_effect?: boolean;
+}
+
+export interface ReconciliationMismatch {
+  hotel_id: string; hotel_name: string; bucket: LedgerBucket; ledger_sum: string; balance: string; difference: string;
+}
+export interface ReconciliationReport { checked_hotels: number; ok: boolean; mismatches: ReconciliationMismatch[]; checked_at: string }
+
+export interface AdminHotelLedger {
+  hotel: { id: string; name: string };
+  balances: HotelBalances;
+  founding_grant: HotelLedgerEntry | null;
+  effective_topup_rate: TopupRate | null;
+  reconciliation: ReconciliationReport;
+  entries: HotelLedgerEntry[];
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+export function getHotelLedger(hotelId: string, page = 1, pageSize = 50) {
+  return request<AdminHotelLedger>(`/admin/hotels/${hotelId}/batasa-ledger?page=${page}&page_size=${pageSize}`);
+}
+
+export function grantFoundingBatasa(hotelId: string, payment_reference: string) {
+  return request<{ entry: HotelLedgerEntry; balances: HotelBalances }>(`/admin/hotels/${hotelId}/founding-grant`, {
+    method: 'POST',
+    body: JSON.stringify({ payment_reference }),
+  });
+}
+
+export function topUpHotel(hotelId: string, batasa: number, payment_reference: string) {
+  return request<{ entry: HotelLedgerEntry; duplicate: boolean; balances: HotelBalances; applied_rate: TopupRate }>(`/admin/hotels/${hotelId}/top-up`, {
+    method: 'POST',
+    body: JSON.stringify({ batasa, payment_reference }),
+  });
+}
+
+export function getTopupRates(hotelId?: string | 'network') {
+  return request<{ rates: TopupRate[] }>(`/admin/topup-rates${hotelId ? `?hotel_id=${encodeURIComponent(hotelId)}` : ''}`);
+}
+
+export function getEffectiveTopupRate(hotelId: string) {
+  return request<{ rate: TopupRate | null }>(`/admin/topup-rates/effective?hotel_id=${encodeURIComponent(hotelId)}`);
+}
+
+export function addTopupRate(hotel_id: string | null, price_paise_per_batasa: number, effective_from?: string) {
+  return request<{ rate: TopupRate }>('/admin/topup-rates', {
+    method: 'POST',
+    body: JSON.stringify({ hotel_id, price_paise_per_batasa, ...(effective_from ? { effective_from } : {}) }),
+  });
+}
+
+export function getLedgerReconciliation() {
+  return request<ReconciliationReport>('/admin/hotel-ledger/reconciliation');
+}

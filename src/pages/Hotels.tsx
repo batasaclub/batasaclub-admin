@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { getHotels, freezeHotel, uploadHotelPhoto, updateHotelWhatsapp, type Hotel } from '../api.ts';
+import { getHotels, freezeHotel, uploadHotelPhoto, updateHotelWhatsapp, getLedgerReconciliation, type Hotel, type ReconciliationReport } from '../api.ts';
+import HotelLedgerPanel from '../components/HotelLedgerPanel.tsx';
 
 const SLAB_COLORS: Record<string, string> = {
   red: 'bg-red-100 text-red-700',
@@ -33,6 +34,9 @@ export default function Hotels() {
   const [whatsappDraft, setWhatsappDraft] = useState<Record<string, string>>({});
   const [savingWhatsapp, setSavingWhatsapp] = useState<Record<string, boolean>>({});
   const [whatsappError, setWhatsappError] = useState<Record<string, string>>({});
+  const [ledgerHotelId, setLedgerHotelId] = useState<string | null>(null);
+  const [recon, setRecon] = useState<ReconciliationReport | null>(null);
+  const [reconError, setReconError] = useState('');
 
   function load() {
     setLoading(true);
@@ -40,6 +44,9 @@ export default function Hotels() {
       .then((d) => setHotels(d.hotels))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+    getLedgerReconciliation()
+      .then((r) => { setRecon(r); setReconError(''); })
+      .catch((e: Error) => setReconError(e.message));
   }
 
   useEffect(load, []);
@@ -103,7 +110,19 @@ export default function Hotels() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Hotels ({hotels.length})</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Hotels ({hotels.length})</h1>
+
+      <div className={`mb-6 rounded-lg border px-4 py-3 text-sm ${reconError ? 'border-gray-200 bg-gray-50 text-gray-600' : recon?.ok ? 'border-green-100 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+        {reconError
+          ? <>Batasa ledger reconciliation unavailable: {reconError}</>
+          : !recon
+          ? <>Checking Batasa ledger reconciliation…</>
+          : recon.ok
+          ? <>✓ Batasa ledger reconciled for all {recon.checked_hotels} hotels (both balances equal their ledger rows).</>
+          : <>Batasa ledger mismatch at {new Set(recon.mismatches.map((m) => m.hotel_id)).size} hotel(s): {recon.mismatches.map((m) => `${m.hotel_name} (${m.bucket === 'general' ? 'general' : 'promotion-only'} ${m.difference})`).join(', ')}. Open the hotel's Batasa panel.</>}
+      </div>
+
+      {ledgerHotelId && <HotelLedgerPanel hotelId={ledgerHotelId} onClose={() => { setLedgerHotelId(null); load(); }} />}
 
       <input
         ref={fileInputRef}
@@ -209,7 +228,13 @@ export default function Hotels() {
                       <span className="text-gray-400 text-xs">Active</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => setLedgerHotelId(h.id)}
+                      className="mr-2 text-xs px-3 py-1.5 rounded-lg font-medium bg-amber-50 text-amber-800 hover:bg-amber-100 cursor-pointer"
+                    >
+                      Batasa
+                    </button>
                     <button
                       onClick={() => handleFreeze(h)}
                       disabled={toggling === h.id}
