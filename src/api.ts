@@ -5,11 +5,34 @@ function authHeaders(): Record<string, string> {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
+// Signed-in admin, stored at login. The API refuses a deactivated admin's token (401) on the
+// next request; any 401 on an authenticated call clears the session and returns to sign-in.
+export interface AdminProfile { id: string; email: string; name: string }
+const PROFILE_KEY = 'admin_profile';
+
+export function getAdminProfile(): AdminProfile | null {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) ?? 'null') as AdminProfile | null; } catch { return null; }
+}
+
+export function saveSession(token: string, admin: AdminProfile) {
+  localStorage.setItem('admin_token', token);
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(admin));
+}
+
+export function clearSession() {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem(PROFILE_KEY);
+}
+
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     headers: { ...authHeaders(), ...(opts?.headers ?? {}) },
   });
+  if (res.status === 401 && localStorage.getItem('admin_token')) {
+    clearSession();
+    window.location.reload();
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: 'Request failed' })) as { error?: string };
     throw new Error(body.error ?? 'Request failed');
@@ -33,12 +56,59 @@ async function uploadRequest<T>(path: string, file: File, fieldName: string): Pr
   return res.json() as Promise<T>;
 }
 
-export function adminLogin(email: string, password: string) {
-  return request<{ token: string }>('/auth/admin/login', {
+// POST /auth/admin/login — named admin account (admin_users). Public: sends no stored token.
+export async function adminLogin(email: string, password: string): Promise<{ token: string; admin: AdminProfile }> {
+  const res = await fetch(`${BASE}/auth/admin/login`, {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   });
+  const body = await res.json().catch(() => ({})) as { token?: string; admin?: AdminProfile; error?: string };
+  if (!res.ok || !body.token || !body.admin) throw new Error(body.error ?? 'Login failed');
+  return { token: body.token, admin: body.admin };
+}
+
+// POST /auth/admin/accept-invite — public; never sends a stored session token.
+export async function acceptAdminInvite(token: string, password: string): Promise<void> {
+  const res = await fetch(`${BASE}/auth/admin/accept-invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+}
+
+// ── Admin accounts ────────────────────────────────────────────────────────────
+
+export type AdminStatus = 'active' | 'invited' | 'invite_expired' | 'inactive';
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  name: string;
+  is_active: boolean;
+  status: AdminStatus;
+  created_at: string;
+  last_login_at: string | null;
+  invite_expires_at: string | null;
+}
+
+export function listAdmins() {
+  return request<{ admins: AdminAccount[] }>('/admin/admins');
+}
+
+export function inviteAdmin(email: string, name: string) {
+  return request<{ admin: AdminAccount }>('/admin/admins', {
+    method: 'POST',
+    body: JSON.stringify({ email, name }),
+  });
+}
+
+export function deactivateAdmin(id: string) {
+  return request<{ ok: true }>(`/admin/admins/${encodeURIComponent(id)}/deactivate`, { method: 'POST' });
 }
 
 export function getStats() {

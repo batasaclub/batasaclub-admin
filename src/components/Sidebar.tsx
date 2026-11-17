@@ -1,4 +1,4 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys';
+type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins';
 
 interface SidebarProps {
   current: Page;
@@ -18,9 +18,10 @@ const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'rate_parity', label: 'Rate Parity',   icon: '⊞' },
   { id: 'adr_bands',   label: 'ADR Bands',     icon: '◎' },
   { id: 'channel_keys', label: 'Channel Keys',  icon: '⚿' },
+  { id: 'admins',      label: 'Admins',        icon: '☺' },
 ];
 
-export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {
+export default function Sidebar({ current, onChange, onLogout, adminName }: SidebarProps & { adminName?: string }) {
   return (
     <aside className="w-60 min-h-screen flex flex-col bg-[#143D2D] text-white fixed top-0 left-0 z-10">
       <div className="px-5 py-6 border-b border-white/10">
@@ -45,6 +46,7 @@ export default function Sidebar({ current, onChange, onLogout }: SidebarProps) {
         })}
       </nav>
       <div className="px-4 py-4 border-t border-white/10">
+        {adminName && <div className="text-xs text-white/60 mb-1 truncate">Signed in as {adminName}</div>}
         <button onClick={onLogout}
           className="w-full text-sm text-white/50 hover:text-white/80 py-2 text-left transition-colors cursor-pointer">
           ⊗ Sign out

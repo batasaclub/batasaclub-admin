@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { adminLogin } from '../api.ts';
+import { adminLogin, saveSession } from '../api.ts';
 
 interface LoginProps {
   onSuccess: () => void;
+  notice?: string;
 }
 
-export default function Login({ onSuccess }: LoginProps) {
+export default function Login({ onSuccess, notice }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,8 +17,8 @@ export default function Login({ onSuccess }: LoginProps) {
     setError('');
     setLoading(true);
     try {
-      const { token } = await adminLogin(email, password);
-      localStorage.setItem('admin_token', token);
+      const { token, admin } = await adminLogin(email, password);
+      saveSession(token, admin);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -34,6 +35,10 @@ export default function Login({ onSuccess }: LoginProps) {
           <div className="text-gray-500 text-sm">Admin Console</div>
         </div>
 
+        {notice && (
+          <div className="text-green-700 text-sm bg-green-50 rounded-lg px-3 py-2 mb-4">{notice}</div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -44,7 +49,7 @@ export default function Login({ onSuccess }: LoginProps) {
               required
               autoFocus
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#143D2D] focus:border-transparent"
-              placeholder="admin@batasaclub.com"
+              placeholder="you@batasaclub.com"
             />
           </div>
 

@@ -12,10 +12,17 @@ import RateParity from './pages/RateParity.tsx';
 import AdrBands from './pages/AdrBands.tsx';
 import SettlementJobLog from './pages/SettlementJobLog.tsx';
 import ChannelKeys from './pages/ChannelKeys.tsx';
+import Admins from './pages/Admins.tsx';
+import SetPassword, { INVITE_ACCEPTED_NOTICE } from './pages/SetPassword.tsx';
+import { clearSession, getAdminProfile } from './api.ts';
 
+// Sessions from the retired shared login have a token but no admin profile: sign in again.
 function isAuthenticated() {
-  return !!localStorage.getItem('admin_token');
+  return !!localStorage.getItem('admin_token') && !!getAdminProfile();
 }
+
+// Admin invite emails link to /set-password?token=… (vercel.json rewrites every path to index.html).
+const isSetPasswordPath = () => window.location.pathname.replace(/\/$/, '') === '/set-password';
 
 const PAGE_TITLES: Record<Page, string> = {
   dashboard:           'Dashboard',
@@ -24,6 +31,7 @@ const PAGE_TITLES: Record<Page, string> = {
   settlement:          'Settlement',
   settlement_job_log:  'Job Monitor',
   channel_keys:        'Channel Keys',
+  admins:              'Admins',
   reviews:             'Reviews',
   transactions:        'Transactions',
   inventory:           'Inventory',
@@ -34,14 +42,28 @@ const PAGE_TITLES: Record<Page, string> = {
 export default function App() {
   const [authed, setAuthed] = useState(isAuthenticated);
   const [page, setPage] = useState<Page>('dashboard');
+  const [settingPassword, setSettingPassword] = useState(isSetPasswordPath);
+  const [notice, setNotice] = useState<string | undefined>();
 
   function logout() {
-    localStorage.removeItem('admin_token');
+    clearSession();
     setAuthed(false);
   }
 
+  if (settingPassword) {
+    return (
+      <SetPassword onDone={() => {
+        clearSession();
+        setAuthed(false);
+        window.history.replaceState(null, '', '/');
+        setNotice(INVITE_ACCEPTED_NOTICE);
+        setSettingPassword(false);
+      }} />
+    );
+  }
+
   if (!authed) {
-    return <Login onSuccess={() => setAuthed(true)} />;
+    return <Login notice={notice} onSuccess={() => { setNotice(undefined); setAuthed(true); }} />;
   }
 
   function renderPage() {
@@ -57,12 +79,13 @@ export default function App() {
       case 'adr_bands':           return <AdrBands />;
       case 'settlement_job_log':  return <SettlementJobLog />;
       case 'channel_keys':        return <ChannelKeys />;
+      case 'admins':              return <Admins />;
     }
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar current={page} onChange={setPage} onLogout={logout} />
+      <Sidebar current={page} onChange={setPage} onLogout={logout} adminName={getAdminProfile()?.name} />
       <div className="flex-1 ml-60 flex flex-col">
         <header className="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-0">
           <h2 className="text-base font-semibold text-gray-800">{PAGE_TITLES[page]}</h2>
