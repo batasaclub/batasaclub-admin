@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
-  getHotelLedger, grantFoundingBatasa, topUpHotel,
+  ADJUSTMENT_REASON_MIN, adjustHotelBatasa, getHotelLedger, grantFoundingBatasa, topUpHotel,
   type AdminHotelLedger, type HotelLedgerEntry, type LedgerBucket,
 } from '../api.ts';
 
@@ -20,6 +20,162 @@ const BUCKET_LABEL: Record<LedgerBucket, string> = { general: 'General', promoti
 const fmt = (n: number) => n.toLocaleString('en-IN');
 const rupees = (paise: number) => '₹' + (paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const PAGE_SIZE = 25;
+
+function newIdempotencyKey(): string {
+  return `adj-${crypto.randomUUID()}`;
+}
+
+type AdjustmentDraft = { bucket: LedgerBucket; batasa: number; reason: string; reference: string | null; key: string };
+
+// Adjustment of one balance, in two steps inside the page: fill in → review and confirm. The
+// idempotency key is made when the review opens and reused if the confirm is retried, so a retry
+// (network error, double click) never adjusts twice; editing the form makes a new one.
+function AdjustmentForm({ hotelName, balances, hotelId, onDone }: {
+  hotelName: string; balances: Record<LedgerBucket, number>; hotelId: string; onDone: (message: string) => void;
+}) {
+  const [bucket, setBucket] = useState<LedgerBucket>('general');
+  const [direction, setDirection] = useState<'add' | 'remove'>('add');
+  const [amount, setAmount] = useState('');
+  const [reason, setReason] = useState('');
+  const [reference, setReference] = useState('');
+  const [draft, setDraft] = useState<AdjustmentDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const amountNum = Number(amount);
+  const amountValid = amount !== '' && Number.isSafeInteger(amountNum) && amountNum > 0;
+  const signed = direction === 'add' ? amountNum : -amountNum;
+  const current = balances[bucket];
+  const wouldGoNegative = amountValid && current + signed < 0;
+
+  function review(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!amountValid) return setError('Enter a whole number of Batasa greater than 0');
+    if (reason.trim().length < ADJUSTMENT_REASON_MIN) return setError(`Reason is required (at least ${ADJUSTMENT_REASON_MIN} characters)`);
+    if (reference.trim().length > 100) return setError('Reference must be at most 100 characters');
+    if (wouldGoNegative) return setError(`Cannot remove ${fmt(amountNum)}: the ${BUCKET_LABEL[bucket].toLowerCase()} balance is ${fmt(current)} and can never go below 0`);
+    setDraft({ bucket, batasa: signed, reason: reason.trim(), reference: reference.trim() || null, key: newIdempotencyKey() });
+  }
+
+  async function confirm() {
+    if (!draft) return;
+    setSaving(true); setError('');
+    try {
+      const r = await adjustHotelBatasa(hotelId, { bucket: draft.bucket, batasa: draft.batasa, reason: draft.reason, reference: draft.reference, idempotency_key: draft.key });
+      const msg = r.duplicate
+        ? 'This adjustment was already recorded — nothing changed.'
+        : `Adjusted ${BUCKET_LABEL[draft.bucket].toLowerCase()} by ${draft.batasa > 0 ? '+' : ''}${fmt(draft.batasa)} Batasa. New balance ${fmt(r.balances[draft.bucket])}.`;
+      setDraft(null); setAmount(''); setReason(''); setReference(''); setDirection('add');
+      onDone(msg);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Any edit after review invalidates the draft (and its idempotency key).
+  const edit = <T,>(set: (v: T) => void) => (v: T) => { set(v); setDraft(null); setError(''); };
+
+  return (
+    <div className="rounded-xl border border-gray-100 p-4">
+      <h3 className="text-sm font-semibold text-gray-800">Adjustment (admin correction)</h3>
+      <p className="mt-1 text-xs text-gray-500">Adds to or removes from one balance. Recorded in the ledger and the audit log with your name and reason. A balance can never go below 0.</p>
+
+      {!draft ? (
+        <form onSubmit={review} className="mt-3 space-y-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <label className="text-xs text-gray-600">
+              Balance
+              <select value={bucket} onChange={(e) => edit(setBucket)(e.target.value as LedgerBucket)} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                <option value="general">General ({fmt(balances.general)})</option>
+                <option value="promotion_only">Promotion-only ({fmt(balances.promotion_only)})</option>
+              </select>
+            </label>
+            <label className="text-xs text-gray-600">
+              Direction
+              <select value={direction} onChange={(e) => edit(setDirection)(e.target.value as 'add' | 'remove')} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                <option value="add">Add (+)</option>
+                <option value="remove">Remove (−)</option>
+              </select>
+            </label>
+            <label className="text-xs text-gray-600">
+              Amount (Batasa)
+              <input
+                value={amount}
+                onChange={(e) => edit(setAmount)(e.target.value.replace(/[^0-9]/g, ''))}
+                inputMode="numeric"
+                placeholder="0"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          <label className="block text-xs text-gray-600">
+            Reason (required, at least {ADJUSTMENT_REASON_MIN} characters)
+            <textarea
+              value={reason}
+              onChange={(e) => edit(setReason)(e.target.value)}
+              rows={2}
+              placeholder="Why this correction is needed"
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="block text-xs text-gray-600">
+            Reference (optional)
+            <input
+              value={reference}
+              onChange={(e) => edit(setReference)(e.target.value)}
+              maxLength={100}
+              placeholder="Ticket, booking ref, payment ref…"
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            />
+          </label>
+          {amountValid && (
+            <p className={`text-xs ${wouldGoNegative ? 'text-red-600' : 'text-gray-600'}`}>
+              {BUCKET_LABEL[bucket]}: {fmt(current)} → {fmt(current + signed)}
+            </p>
+          )}
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button type="submit" className="w-full cursor-pointer rounded-lg bg-[#143D2D] px-3 py-2 text-sm font-medium text-white">
+            Review adjustment
+          </button>
+        </form>
+      ) : (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-gray-800" role="alertdialog" aria-label="Confirm adjustment">
+          <p className="font-semibold">Confirm this adjustment for {hotelName}</p>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            <dt className="text-gray-500">Balance</dt><dd>{BUCKET_LABEL[draft.bucket]}</dd>
+            <dt className="text-gray-500">Change</dt>
+            <dd className={draft.batasa < 0 ? 'font-semibold text-red-700' : 'font-semibold text-green-700'}>{draft.batasa > 0 ? '+' : ''}{fmt(draft.batasa)} Batasa</dd>
+            <dt className="text-gray-500">Balance after</dt><dd>{fmt(balances[draft.bucket])} → {fmt(balances[draft.bucket] + draft.batasa)}</dd>
+            <dt className="text-gray-500">Reason</dt><dd className="break-words">{draft.reason}</dd>
+            <dt className="text-gray-500">Reference</dt><dd className="break-words">{draft.reference ?? '—'}</dd>
+          </dl>
+          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setDraft(null); setError(''); }}
+              disabled={saving}
+              className="flex-1 cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 disabled:opacity-40"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={confirm}
+              disabled={saving}
+              className="flex-1 cursor-pointer rounded-lg bg-[#143D2D] px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {saving ? 'Saving…' : 'Confirm adjustment'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function BalanceCard({ label, value, explanation, tone }: { label: string; value: number; explanation: string; tone: 'green' | 'gold' }) {
   return (
@@ -43,6 +199,7 @@ export default function HotelLedgerPanel({ hotelId, onClose }: { hotelId: string
   const [topping, setTopping] = useState(false);
   const [topError, setTopError] = useState('');
   const [topNotice, setTopNotice] = useState('');
+  const [adjustNotice, setAdjustNotice] = useState('');
 
   const load = useCallback(() => {
     getHotelLedger(hotelId, page, PAGE_SIZE)
@@ -195,6 +352,14 @@ export default function HotelLedgerPanel({ hotelId, onClose }: { hotelId: string
               </form>
             </div>
 
+            <AdjustmentForm
+              hotelId={hotelId}
+              hotelName={data.hotel.name}
+              balances={{ general: data.balances.general, promotion_only: data.balances.promotion_only }}
+              onDone={(msg) => { setAdjustNotice(msg); load(); }}
+            />
+            {adjustNotice && <p className="-mt-4 text-xs text-green-700">{adjustNotice}</p>}
+
             <div>
               <h3 className="mb-2 text-sm font-semibold text-gray-800">Ledger ({fmt(data.total)} entries)</h3>
               <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -218,7 +383,12 @@ export default function HotelLedgerPanel({ hotelId, onClose }: { hotelId: string
                         <td className={`px-3 py-2 text-right font-medium ${e.batasa < 0 ? 'text-red-600' : 'text-green-700'}`}>{e.batasa > 0 ? '+' : ''}{fmt(e.batasa)}</td>
                         <td className="px-3 py-2 text-right text-gray-700">{fmt(e.balance_after)}</td>
                         <td className="px-3 py-2 text-xs text-gray-500">
-                          {e.payment_reference ? `Payment ${e.payment_reference}` : e.reference_type ? `${e.reference_type} ${e.reference_id?.slice(0, 8) ?? ''}` : '—'}
+                          {e.payment_reference
+                            ? `Payment ${e.payment_reference}`
+                            : e.reference_type === 'admin_reference'
+                            ? `Ref ${e.reference_id}`
+                            : e.reference_type ? `${e.reference_type} ${e.reference_id?.slice(0, 8) ?? ''}` : e.txn_type === 'adjustment' ? '' : '—'}
+                          {e.reason && <span className="block text-gray-600">{e.reason}</span>}
                           {e.price_paise_per_batasa != null && ` · ${rupees(e.price_paise_per_batasa)}/Batasa`}
                         </td>
                       </tr>

@@ -605,6 +605,7 @@ export interface HotelLedgerEntry {
   payment_reference: string | null;
   price_paise_per_batasa: number | null;
   topup_rate_id: string | null;
+  reason?: string | null; // adjustment only
   actor_id: string;
   created_at: string;
 }
@@ -653,6 +654,19 @@ export function topUpHotel(hotelId: string, batasa: number, payment_reference: s
   return request<{ entry: HotelLedgerEntry; duplicate: boolean; balances: HotelBalances; applied_rate: TopupRate }>(`/admin/hotels/${hotelId}/top-up`, {
     method: 'POST',
     body: JSON.stringify({ batasa, payment_reference }),
+  });
+}
+
+// Admin correction of one bucket. batasa is signed (+ add, − remove); reason ≥ 10 chars. One
+// idempotency_key per confirmed submit, so a retry never adjusts twice.
+export const ADJUSTMENT_REASON_MIN = 10;
+export function adjustHotelBatasa(
+  hotelId: string,
+  input: { bucket: LedgerBucket; batasa: number; reason: string; reference: string | null; idempotency_key: string },
+) {
+  return request<{ entry: HotelLedgerEntry; duplicate: boolean; balances: HotelBalances }>(`/admin/hotels/${hotelId}/batasa-adjustment`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 
