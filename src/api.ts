@@ -177,28 +177,6 @@ export function getMembers(search?: string, page = 1) {
   return request<MembersResponse>(`/admin/members?${qs.toString()}`);
 }
 
-export function getSettlementHotels() {
-  return request<{ hotels: SettlementRow[] }>('/admin/settlement/hotels');
-}
-
-export function getReserveHealth() {
-  return request<ReserveHealth>('/admin/settlement/reserve/health');
-}
-
-export function runSettlement(month: string) {
-  return request<{ processed: number; skipped: number }>('/admin/settlement/run', {
-    method: 'POST',
-    body: JSON.stringify({ month }),
-  });
-}
-
-export function markPaid(settlementId: string, paymentMethod?: string) {
-  return request<{ settlement: Settlement }>(`/admin/settlement/${settlementId}/mark-paid`, {
-    method: 'POST',
-    body: JSON.stringify({ payment_method: paymentMethod }),
-  });
-}
-
 export function getReviews(hotelId?: string, page = 1) {
   const qs = new URLSearchParams({ page: String(page), limit: '50' });
   if (hotelId) qs.set('hotel_id', hotelId);
@@ -216,8 +194,6 @@ export interface StatsResponse {
   total_members: number;
   total_points_issued: number;
   total_points_redeemed: number;
-  reserve_balance_paise: number;
-  coverage_ratio: number;
   mrr_paise: number;
 }
 
@@ -263,40 +239,6 @@ export interface Member {
   created_at: string;
 }
 
-export interface Settlement {
-  id: string;
-  hotel_id: string;
-  period_month: string;
-  saas_fee_paise: number;
-  redemptions_paise: number;
-  net_payable_paise: number;
-  payment_status: string;
-  paid_at: string | null;
-  invoice_ref: string | null;
-}
-
-export interface SettlementRow {
-  hotel_id: string;
-  hotel_name: string;
-  city: string;
-  current_month: {
-    eligible_revenue_paise: number;
-    contribution_paise: number;
-    settlement: Settlement | null;
-  };
-  latest_settlement: Settlement | null;
-  float_status: { balance_paise: number; issuance_allowed: boolean };
-}
-
-export interface ReserveHealth {
-  reserve_balance_paise: number;
-  point_liability_paise: number;
-  expected_12mo_reimbursement_paise: number;
-  coverage_ratio: number;
-  health_status: string;
-  flags: { below_min_coverage: boolean; liability_exceeds_cap: boolean };
-}
-
 export interface Review {
   id: string;
   hotels: { id: string; name: string; city: string } | null;
@@ -335,24 +277,6 @@ export interface TransactionsResponse {
   limit: number;
 }
 
-export interface InventoryRow {
-  hotel_id: string;
-  hotel_name: string;
-  city: string;
-  total_rooms: number;
-  purchased_batasa: number;
-  issued_batasa: number;
-  available_batasa: number;
-  minimum_batasa: number;
-  available_pct: number | null;
-  is_low: boolean;
-  is_zero: boolean;
-}
-
-export function getInventoryMonitoring() {
-  return request<InventoryRow[]>('/inventory/monitoring');
-}
-
 export interface AdrBand {
   id: string;
   adr_min_rupees: number;
@@ -375,29 +299,6 @@ export function updateAdrBand(
     method: 'PATCH',
     body: JSON.stringify(data),
   });
-}
-
-export interface BreakageRow {
-  hotel_id: string;
-  hotel_name: string | null;
-  month: string;
-  batasa_issued: number;
-  batasa_expired: number;
-  batasa_dormant_estimate: number;
-  breakage_rate_pct: number;
-  reserve_benefit_paise: number;
-}
-
-export interface BreakageSummary {
-  total_issued: number;
-  total_expired: number;
-  total_dormant: number;
-  network_breakage_rate_pct: number;
-  total_reserve_benefit_paise: number;
-}
-
-export function getBreakage() {
-  return request<{ rows: BreakageRow[]; summary: BreakageSummary }>('/admin/breakage');
 }
 
 export interface BatasaHealth {
@@ -447,28 +348,6 @@ export function updateNetworkConfig(key: string, value: string) {
     method: 'PUT',
     body: JSON.stringify({ value }),
   });
-}
-
-export interface SettlementJobEntry {
-  id: string;
-  hotel_id: string;
-  hotel_name: string;
-  run_date: string;
-  status: 'success' | 'failed';
-  error_message: string | null;
-  processed_at: string;
-}
-
-export interface SettlementJobRun {
-  run_date: string;
-  total: number;
-  succeeded: number;
-  failed: number;
-  entries: SettlementJobEntry[];
-}
-
-export function getSettlementJobLog() {
-  return request<{ runs: SettlementJobRun[] }>('/admin/settlement-job-log');
 }
 
 export interface ChannelKey {
@@ -687,4 +566,26 @@ export function addTopupRate(hotel_id: string | null, price_paise_per_batasa: nu
 
 export function getLedgerReconciliation() {
   return request<ReconciliationReport>('/admin/hotel-ledger/reconciliation');
+}
+
+// ── Hotel monthly statement (replaces the retired v1 settlement) ─────────────
+// GET /admin/hotels/:id/statement?month=YYYY-MM — read-only, from the hotel Batasa ledger; months
+// in Asia/Kolkata. 1 Batasa = ₹1.
+export interface StatementBucket { opening: number; credits: number; debits: number; net: number; closing: number }
+export interface StatementTypeTotal { txn_type: string; batasa: number; count: number; by_bucket: Record<LedgerBucket, number> }
+export interface HotelStatement {
+  hotel: { id: string; name: string };
+  month: string;
+  time_zone: string;
+  period: { start: string; end_exclusive: string };
+  complete: boolean;
+  buckets: Record<LedgerBucket, StatementBucket>;
+  totals: StatementBucket;
+  totals_by_type: StatementTypeTotal[];
+  entry_count: number;
+  explanation: Record<LedgerBucket, string>;
+}
+
+export function getHotelStatement(hotelId: string, month: string) {
+  return request<HotelStatement>(`/admin/hotels/${hotelId}/statement?month=${encodeURIComponent(month)}`);
 }

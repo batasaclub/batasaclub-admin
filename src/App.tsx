@@ -4,13 +4,10 @@ import Login from './pages/Login.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import Hotels from './pages/Hotels.tsx';
 import Members from './pages/Members.tsx';
-import Settlement from './pages/Settlement.tsx';
 import Reviews from './pages/Reviews.tsx';
 import Transactions from './pages/Transactions.tsx';
-import Inventory from './pages/Inventory.tsx';
 import RateParity from './pages/RateParity.tsx';
 import AdrBands from './pages/AdrBands.tsx';
-import SettlementJobLog from './pages/SettlementJobLog.tsx';
 import ChannelKeys from './pages/ChannelKeys.tsx';
 import Admins from './pages/Admins.tsx';
 import AuditLog from './pages/AuditLog.tsx';
@@ -31,8 +28,6 @@ const PAGE_TITLES: Record<Page, string> = {
   dashboard:           'Dashboard',
   hotels:              'Hotels',
   members:             'Members',
-  settlement:          'Settlement',
-  settlement_job_log:  'Job Monitor',
   channel_keys:        'Channel Keys',
   admins:              'Admins',
   audit_log:           'Audit Log',
@@ -40,7 +35,6 @@ const PAGE_TITLES: Record<Page, string> = {
   topup_rates:         'Top-up Rates',
   reviews:             'Reviews',
   transactions:        'Transactions',
-  inventory:           'Inventory',
   rate_parity:         'Rate Parity',
   adr_bands:           'ADR Bands',
 };
@@ -77,13 +71,10 @@ export default function App() {
       case 'dashboard':    return <Dashboard />;
       case 'hotels':       return <Hotels />;
       case 'members':      return <Members />;
-      case 'settlement':   return <Settlement />;
       case 'reviews':      return <Reviews />;
       case 'transactions': return <Transactions />;
-      case 'inventory':    return <Inventory />;
       case 'rate_parity':  return <RateParity />;
       case 'adr_bands':           return <AdrBands />;
-      case 'settlement_job_log':  return <SettlementJobLog />;
       case 'channel_keys':        return <ChannelKeys />;
       case 'admins':              return <Admins />;
       case 'audit_log':           return <AuditLog />;

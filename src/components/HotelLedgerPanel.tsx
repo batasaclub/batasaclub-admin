@@ -3,6 +3,7 @@ import {
   ADJUSTMENT_REASON_MIN, adjustHotelBatasa, getHotelLedger, grantFoundingBatasa, topUpHotel,
   type AdminHotelLedger, type HotelLedgerEntry, type LedgerBucket,
 } from '../api.ts';
+import HotelStatementSection from './HotelStatementSection.tsx';
 
 const TXN_LABEL: Record<string, string> = {
   founding_grant: 'Founding grant',
@@ -359,6 +360,8 @@ export default function HotelLedgerPanel({ hotelId, onClose }: { hotelId: string
               onDone={(msg) => { setAdjustNotice(msg); load(); }}
             />
             {adjustNotice && <p className="-mt-4 text-xs text-green-700">{adjustNotice}</p>}
+
+            <HotelStatementSection hotelId={hotelId} refreshKey={data.total} />
 
             <div>
               <h3 className="mb-2 text-sm font-semibold text-gray-800">Ledger ({fmt(data.total)} entries)</h3>

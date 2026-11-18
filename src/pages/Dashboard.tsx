@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getStats, getBreakage, getBatasaHealth, type StatsResponse, type BreakageSummary, type BatasaHealth } from '../api.ts';
+import { getStats, getBatasaHealth, type StatsResponse, type BatasaHealth } from '../api.ts';
 
 function rupees(paise: number) {
   return '₹' + (paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -25,14 +25,13 @@ function StatCard({ label, value, sub, alert, gold }: StatCardProps) {
 
 export default function Dashboard() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
-  const [breakage, setBreakage] = useState<BreakageSummary | null>(null);
   const [health, setHealth] = useState<BatasaHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([getStats(), getBreakage(), getBatasaHealth()])
-      .then(([s, b, h]) => { setStats(s); setBreakage(b.summary); setHealth(h); })
+    Promise.all([getStats(), getBatasaHealth()])
+      .then(([s, h]) => { setStats(s); setHealth(h); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -40,8 +39,6 @@ export default function Dashboard() {
   if (loading) return <div className="p-8 text-gray-500">Loading…</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
   if (!stats) return null;
-
-  const coverageLow = stats.coverage_ratio < 1.25 && stats.coverage_ratio !== 999;
 
   return (
     <div className="p-8">
@@ -65,17 +62,6 @@ export default function Dashboard() {
           label="Batasa Redeemed"
           value={stats.total_points_redeemed.toLocaleString()}
           sub="lifetime points used"
-        />
-        <StatCard
-          label="Reserve Pool"
-          value={rupees(stats.reserve_balance_paise)}
-          sub="global reserve balance"
-        />
-        <StatCard
-          label="Reserve Coverage"
-          value={stats.coverage_ratio === 999 ? '∞' : `${stats.coverage_ratio.toFixed(2)}x`}
-          sub={coverageLow ? 'Below 1.25x minimum' : '12-month obligation coverage'}
-          alert={coverageLow}
         />
         <StatCard
           label="Monthly MRR"
@@ -122,35 +108,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-8 mb-3">Breakage Observability</h2>
-      {breakage && breakage.total_issued === 0 ? (
-        <div className="rounded-xl border border-gray-100 bg-white p-5 text-sm text-gray-400">
-          No breakage data yet — populates as Batasa cohorts mature past 12 months with unredeemd points.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard
-            label="Network Breakage Rate"
-            value={breakage != null ? `${breakage.network_breakage_rate_pct.toFixed(1)}%` : '—'}
-            sub="(expired + dormant) / issued"
-          />
-          <StatCard
-            label="Reserve Benefit"
-            value={breakage != null ? rupees(breakage.total_reserve_benefit_paise) : '—'}
-            sub="33% of breakage @ ₹1/pt"
-          />
-          <StatCard
-            label="Expired Batasa"
-            value={breakage != null ? Math.round(breakage.total_expired).toLocaleString() : '—'}
-            sub="pro-rata to issuing hotel"
-          />
-          <StatCard
-            label="Dormant Estimate"
-            value={breakage != null ? Math.round(breakage.total_dormant).toLocaleString() : '—'}
-            sub=">12 mo, never redeemed"
-          />
-        </div>
-      )}
     </div>
   );
 }

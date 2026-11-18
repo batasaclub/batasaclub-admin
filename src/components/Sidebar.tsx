@@ -1,4 +1,5 @@
-type Page = 'dashboard' | 'hotels' | 'members' | 'settlement' | 'settlement_job_log' | 'reviews' | 'transactions' | 'inventory' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue' | 'topup_rates';
+// v1 screens retired (Inventory, Settlement, Job Monitor): the hotel monthly statement is in Hotels → Batasa.
+type Page = 'dashboard' | 'hotels' | 'members' | 'reviews' | 'transactions' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue' | 'topup_rates';
 
 interface SidebarProps {
   current: Page;
@@ -12,11 +13,8 @@ const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'hotels',      label: 'Hotels',        icon: '⌂' },
   { id: 'topup_rates', label: 'Top-up Rates',  icon: '₿' },
   { id: 'members',     label: 'Members',       icon: '◉' },
-  { id: 'settlement',        label: 'Settlement',     icon: '₹' },
-  { id: 'settlement_job_log', label: 'Job Monitor',   icon: '⚙' },
   { id: 'reviews',     label: 'Reviews',       icon: '★' },
   { id: 'transactions',label: 'Transactions',  icon: '⇄' },
-  { id: 'inventory',   label: 'Inventory',     icon: '◈' },
   { id: 'rate_parity', label: 'Rate Parity',   icon: '⊞' },
   { id: 'adr_bands',   label: 'ADR Bands',     icon: '◎' },
   { id: 'channel_keys', label: 'Channel Keys',  icon: '⚿' },
