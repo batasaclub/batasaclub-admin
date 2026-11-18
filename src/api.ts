@@ -589,3 +589,84 @@ export interface HotelStatement {
 export function getHotelStatement(hotelId: string, month: string) {
   return request<HotelStatement>(`/admin/hotels/${hotelId}/statement?month=${encodeURIComponent(month)}`);
 }
+
+// ── Redemption queue (ARTHA_ADMIN only) ───────────────────────────────────────
+// A guest's slab booking waits in pending_redemption with nothing debited. Approve debits the guest
+// (PATCH /bookings/:ref/confirm-redemption); reject cancels the booking, debits nothing, releases
+// the room nights (POST /admin/bookings/:ref/reject-redemption, reason required).
+export interface PendingRedemption {
+  booking_id: string;
+  booking_ref: string;
+  requested_at: string | null;
+  booking_channel: string | null;
+  guest: { id: string; name: string | null; email: string | null; mobile: string | null; tier: string } | null;
+  hotel: { id: string; name: string; city: string };
+  room: string | null;
+  check_in: string;
+  check_out: string;
+  nights: number;
+  slab: number | null;
+  batasa: number;
+  redemption_value_paise: number;
+  cash_due_paise: number;
+  guest_balance: number | null;
+  sufficient_balance: boolean;
+  expires_at: string | null;
+  expired: boolean;
+}
+
+export function getPendingRedemptions(page = 1, pageSize = 50) {
+  return request<{ redemptions: PendingRedemption[]; page: number; page_size: number; total: number }>(
+    `/admin/redemptions?status=pending&page=${page}&page_size=${pageSize}`,
+  );
+}
+
+export function confirmRedemption(bookingRef: string) {
+  return request<{ ok: boolean; pointsDeducted: number; newBalance: number }>(
+    `/bookings/${encodeURIComponent(bookingRef)}/confirm-redemption`, { method: 'PATCH' },
+  );
+}
+
+export function rejectRedemption(bookingRef: string, reason: string) {
+  return request<{ booking: { booking_ref: string; status: string }; nights_released: string[]; batasa_debited: number }>(
+    `/admin/bookings/${encodeURIComponent(bookingRef)}/reject-redemption`, { method: 'POST', body: JSON.stringify({ reason }) },
+  );
+}
+
+// ── Compensation requests (GM requests; ARTHA_ADMIN approves / rejects) ──────
+export type CompensationRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface CompensationRequest {
+  id: string;
+  status: CompensationRequestStatus;
+  batasa_requested: number;
+  reason: string;
+  requested_at: string;
+  complaint: { id: string; category: string; description: string; status: string; booking_ref: string | null };
+  hotel: { id: string; name: string; city: string; general_balance: number };
+  guest: { id: string; name: string | null; email: string | null; balance: number };
+  requested_by: { id: string; full_name: string | null; email: string } | null;
+  decided_by: { id: string; name: string } | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  batasa_paid: number | null;
+  sufficient_general_balance: boolean;
+}
+
+export function getCompensationRequests(status: CompensationRequestStatus | 'all', page = 1, pageSize = 50) {
+  return request<{ requests: CompensationRequest[]; page: number; page_size: number; total: number }>(
+    `/admin/compensation-requests?status=${status}&page=${page}&page_size=${pageSize}`,
+  );
+}
+
+export function approveCompensationRequest(id: string, note?: string) {
+  return request<{ batasa_awarded: number; hotel_general_balance_after: number; member_balance_after: number }>(
+    `/admin/compensation-requests/${id}/approve`, { method: 'POST', body: JSON.stringify(note ? { note } : {}) },
+  );
+}
+
+export function rejectCompensationRequest(id: string, reason: string) {
+  return request<{ id: string; status: 'rejected' }>(
+    `/admin/compensation-requests/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) },
+  );
+}

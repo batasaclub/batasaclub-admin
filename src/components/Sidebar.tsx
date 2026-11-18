@@ -1,5 +1,5 @@
 // v1 screens retired (Inventory, Settlement, Job Monitor): the hotel monthly statement is in Hotels → Batasa.
-type Page = 'dashboard' | 'hotels' | 'members' | 'reviews' | 'transactions' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue' | 'topup_rates';
+type Page = 'dashboard' | 'hotels' | 'members' | 'reviews' | 'transactions' | 'rate_parity' | 'adr_bands' | 'channel_keys' | 'admins' | 'audit_log' | 'earn_queue' | 'redemption_queue' | 'compensation_requests' | 'topup_rates';
 
 interface SidebarProps {
   current: Page;
@@ -10,6 +10,8 @@ interface SidebarProps {
 const nav: { id: Page; label: string; icon: string }[] = [
   { id: 'dashboard',   label: 'Dashboard',    icon: '▦' },
   { id: 'earn_queue',  label: 'Earn Queue',    icon: '✓' },
+  { id: 'redemption_queue', label: 'Redemptions', icon: '⇆' },
+  { id: 'compensation_requests', label: 'Compensation', icon: '✚' },
   { id: 'hotels',      label: 'Hotels',        icon: '⌂' },
   { id: 'topup_rates', label: 'Top-up Rates',  icon: '₿' },
   { id: 'members',     label: 'Members',       icon: '◉' },
